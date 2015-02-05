@@ -46,26 +46,16 @@ import static com.google.common.base.Preconditions.checkState;
  * <p>{@link Peer#getHandler()} is part of a Netty Pipeline with a Feathercoin serializer downstream of it.
  */
 public class Peer {
-    interface PeerLifecycleListener {
-        /** Called when the peer is connected */
-        public void onPeerConnected(Peer peer);
-        /** Called when the peer is disconnected */
-        public void onPeerDisconnected(Peer peer);
-    }
-
     private static final Logger log = LoggerFactory.getLogger(Peer.class);
-
+    // How frequently to refresh the filter. This should become dynamic in future and calculated depending on the
+    // actual false positive rate. For now a good value was determined empirically around January 2013.
+    private static final int RESEND_BLOOM_FILTER_BLOCK_COUNT = 25000;
+    private static final int PING_MOVING_AVERAGE_WINDOW = 20;
     protected final ReentrantLock lock = Locks.lock("peer");
-
     private final NetworkParameters params;
     private final AbstractBlockChain blockChain;
-    private volatile PeerAddress vAddress;
     private final CopyOnWriteArrayList<PeerEventListener> eventListeners;
     private final CopyOnWriteArrayList<PeerLifecycleListener> lifecycleListeners;
-    // Whether to try and download blocks and transactions from this peer. Set to false by PeerGroup if not the
-    // primary peer. This is to avoid redundant work and concurrency problems with downloading the same chain
-    // in parallel.
-    private volatile boolean vDownloadData;
     // The version data to announce to the other side of the connections we make: useful for setting our "user agent"
     // equivalent and other things.
     private final VersionMessage versionMessage;
@@ -78,6 +68,23 @@ public class Peer {
     private final MemoryPool memoryPool;
     // Each wallet added to the peer will be notified of downloaded transaction data.
     private final CopyOnWriteArrayList<Wallet> wallets;
+    // Keeps track of things we requested internally with getdata but didn't receive yet, so we can avoid re-requests.
+    // It's not quite the same as getDataFutures, as this is used only for getdatas done as part of downloading
+    // the chain and so is lighter weight (we just keep a bunch of hashes not futures).
+    //
+    // It is important to avoid a nasty edge case where we can end up with parallel chain downloads proceeding
+    // simultaneously if we were to receive a newly solved block whilst parts of the chain are streaming to us.
+    private final HashSet<Sha256Hash> pendingBlockDownloads = new HashSet<Sha256Hash>();
+    private final CopyOnWriteArrayList<GetDataRequest> getDataFutures;
+    // Outstanding pings against this peer and how long the last one took to complete.
+    private final ReentrantLock lastPingTimesLock = new ReentrantLock();
+    private final CopyOnWriteArrayList<PendingPing> pendingPings;
+    private final PeerHandler handler;
+    private volatile PeerAddress vAddress;
+    // Whether to try and download blocks and transactions from this peer. Set to false by PeerGroup if not the
+    // primary peer. This is to avoid redundant work and concurrency problems with downloading the same chain
+    // in parallel.
+    private volatile boolean vDownloadData;
     // A time before which we only download block headers, after that point we download block bodies.
     @GuardedBy("lock") private long fastCatchupTimeSecs;
     // Whether we are currently downloading headers only or block bodies. Starts at true. If the fast catchup time is
@@ -94,41 +101,16 @@ public class Peer {
     // refresh the server-side side filter by sending a new one (it degrades over time as false positives are added
     // on the remote side, see BIP 37 for a discussion of this).
     private int filteredBlocksReceived;
-    // How frequently to refresh the filter. This should become dynamic in future and calculated depending on the
-    // actual false positive rate. For now a good value was determined empirically around January 2013.
-    private static final int RESEND_BLOOM_FILTER_BLOCK_COUNT = 25000;
-    // Keeps track of things we requested internally with getdata but didn't receive yet, so we can avoid re-requests.
-    // It's not quite the same as getDataFutures, as this is used only for getdatas done as part of downloading
-    // the chain and so is lighter weight (we just keep a bunch of hashes not futures).
-    //
-    // It is important to avoid a nasty edge case where we can end up with parallel chain downloads proceeding
-    // simultaneously if we were to receive a newly solved block whilst parts of the chain are streaming to us.
-    private final HashSet<Sha256Hash> pendingBlockDownloads = new HashSet<Sha256Hash>();
     // The lowest version number we're willing to accept. Lower than this will result in an immediate disconnect.
     private volatile int vMinProtocolVersion = Pong.MIN_PROTOCOL_VERSION;
-    // When an API user explicitly requests a block or transaction from a peer, the InventoryItem is put here
-    // whilst waiting for the response. Is not used for downloads Peer generates itself.
-    private static class GetDataRequest {
-        Sha256Hash hash;
-        SettableFuture future;
-        // If the peer does not support the notfound message, we'll use ping/pong messages to simulate it. This is
-        // a nasty hack that relies on the fact that feathercoin-qt is single threaded and processes messages in order.
-        // The nonce field records which pong should clear this request as "not found".
-        long nonce;
-    }
-    private final CopyOnWriteArrayList<GetDataRequest> getDataFutures;
-
-    // Outstanding pings against this peer and how long the last one took to complete.
-    private final ReentrantLock lastPingTimesLock = new ReentrantLock();
     @GuardedBy("lastPingTimesLock") private long[] lastPingTimes = null;
-    private final CopyOnWriteArrayList<PendingPing> pendingPings;
-    private static final int PING_MOVING_AVERAGE_WINDOW = 20;
-
     private volatile Channel vChannel;
     private volatile VersionMessage vPeerVersionMessage;
     private boolean isAcked;
-    private final PeerHandler handler;
-
+    // Keep track of the last request we made to the peer in blockChainDownload so we can avoid redundant and harmful
+    // getblocks requests. This does not have to be synchronized because blockChainDownload cannot be called from
+    // multiple threads simultaneously.
+    private Sha256Hash lastGetBlocksBegin, lastGetBlocksEnd;
     /**
      * Construct a peer that reads/writes from the given block chain.
      */
@@ -200,48 +182,9 @@ public class Peer {
         }
     }
 
-    class PeerHandler extends SimpleChannelHandler {
-        @Override
-        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-            super.channelClosed(ctx, e);
-            notifyDisconnect();
-        }
-
-        @Override
-        public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-            vAddress = new PeerAddress((InetSocketAddress)e.getValue());
-            vChannel = e.getChannel();
-            super.connectRequested(ctx, e);
-        }
-
-        /** Catch any exceptions, logging them and then closing the channel. */
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-            String s;
-            PeerAddress addr = vAddress;
-            s = addr == null ? "?" : addr.toString();
-            if (e.getCause() instanceof ConnectException || e.getCause() instanceof IOException) {
-                // Short message for network errors
-                log.info(s + " - " + e.getCause().getMessage());
-            } else {
-                log.warn(s + " - ", e.getCause());
-            }
-
-            e.getChannel().close();
-        }
-
-        /** Handle incoming Feathercoin messages */
-        @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-            Message m = (Message)e.getMessage();
-            processMessage(e, m);
-        }
-
-        public Peer getPeer() {
-            return Peer.this;
-        }
-    }
-
+/*
+TODO: add message handling for 'checkpoint' message type
+ */
   private void processMessage(MessageEvent e, Message m) throws IOException, VerificationException, ProtocolException {
         try {
             // Allow event listeners to filter the message stream. Listeners are allowed to drop messages by
@@ -1019,11 +962,6 @@ public class Peer {
         return Channels.write(vChannel, m);
     }
 
-    // Keep track of the last request we made to the peer in blockChainDownload so we can avoid redundant and harmful
-    // getblocks requests. This does not have to be synchronized because blockChainDownload cannot be called from
-    // multiple threads simultaneously.
-    private Sha256Hash lastGetBlocksBegin, lastGetBlocksEnd;
-
     private void blockChainDownload(Sha256Hash toHash) throws IOException {
         // The block chain download process is a bit complicated. Basically, we start with one or more blocks in a
         // chain that we have from a previous session. We want to catch up to the head of the chain BUT we don't know
@@ -1127,30 +1065,6 @@ public class Peer {
                 listener.onChainDownloadStarted(this, blocksLeft);
             // When we just want as many blocks as possible, we can set the target hash to zero.
             blockChainDownload(Sha256Hash.ZERO_HASH);
-        }
-    }
-
-    private class PendingPing {
-        // The future that will be invoked when the pong is heard back.
-        public SettableFuture<Long> future;
-        // The random nonce that lets us tell apart overlapping pings/pongs.
-        public final long nonce;
-        // Measurement of the time elapsed.
-        public final long startTimeMsec;
-
-        public PendingPing(long nonce) {
-            future = SettableFuture.create();
-            this.nonce = nonce;
-            startTimeMsec = Utils.now().getTime();
-        }
-
-        public void complete() {
-            checkNotNull(future, "Already completed");
-            Long elapsed = Utils.now().getTime() - startTimeMsec;
-            Peer.this.addPingTimeData(elapsed);
-            log.debug("{}: ping time is {} msec", Peer.this.toString(), elapsed);
-            future.set(elapsed);
-            future = null;
         }
     }
 
@@ -1314,6 +1228,14 @@ public class Peer {
     }
 
     /**
+     * Returns the last {@link BloomFilter} set by {@link Peer#setBloomFilter(BloomFilter)}. Bloom filters tell
+     * the remote node what transactions to send us, in a compact manner.
+     */
+    public BloomFilter getBloomFilter() {
+        return vBloomFilter;
+    }
+
+    /**
      * <p>Sets a Bloom filter on this connection. This will cause the given {@link BloomFilter} object to be sent to the
      * remote peer and if either a memory pool has been set using the constructor or the
      * vDownloadData property is true, a {@link MemoryPoolMessage} is sent as well to trigger downloading of any
@@ -1345,11 +1267,87 @@ public class Peer {
             });
     }
 
-    /**
-     * Returns the last {@link BloomFilter} set by {@link Peer#setBloomFilter(BloomFilter)}. Bloom filters tell
-     * the remote node what transactions to send us, in a compact manner.
-     */
-    public BloomFilter getBloomFilter() {
-        return vBloomFilter;
+    interface PeerLifecycleListener {
+        /** Called when the peer is connected */
+        public void onPeerConnected(Peer peer);
+        /** Called when the peer is disconnected */
+        public void onPeerDisconnected(Peer peer);
+    }
+
+    // When an API user explicitly requests a block or transaction from a peer, the InventoryItem is put here
+    // whilst waiting for the response. Is not used for downloads Peer generates itself.
+    private static class GetDataRequest {
+        Sha256Hash hash;
+        SettableFuture future;
+        // If the peer does not support the notfound message, we'll use ping/pong messages to simulate it. This is
+        // a nasty hack that relies on the fact that feathercoin-qt is single threaded and processes messages in order.
+        // The nonce field records which pong should clear this request as "not found".
+        long nonce;
+    }
+
+    class PeerHandler extends SimpleChannelHandler {
+        @Override
+        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            super.channelClosed(ctx, e);
+            notifyDisconnect();
+        }
+
+        @Override
+        public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+            vAddress = new PeerAddress((InetSocketAddress)e.getValue());
+            vChannel = e.getChannel();
+            super.connectRequested(ctx, e);
+        }
+
+        /** Catch any exceptions, logging them and then closing the channel. */
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+            String s;
+            PeerAddress addr = vAddress;
+            s = addr == null ? "?" : addr.toString();
+            if (e.getCause() instanceof ConnectException || e.getCause() instanceof IOException) {
+                // Short message for network errors
+                log.info(s + " - " + e.getCause().getMessage());
+            } else {
+                log.warn(s + " - ", e.getCause());
+            }
+
+            e.getChannel().close();
+        }
+
+        /** Handle incoming Feathercoin messages */
+        @Override
+        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+            Message m = (Message)e.getMessage();
+            processMessage(e, m);
+        }
+
+        public Peer getPeer() {
+            return Peer.this;
+        }
+    }
+
+    private class PendingPing {
+        // The random nonce that lets us tell apart overlapping pings/pongs.
+        public final long nonce;
+        // Measurement of the time elapsed.
+        public final long startTimeMsec;
+        // The future that will be invoked when the pong is heard back.
+        public SettableFuture<Long> future;
+
+        public PendingPing(long nonce) {
+            future = SettableFuture.create();
+            this.nonce = nonce;
+            startTimeMsec = Utils.now().getTime();
+        }
+
+        public void complete() {
+            checkNotNull(future, "Already completed");
+            Long elapsed = Utils.now().getTime() - startTimeMsec;
+            Peer.this.addPingTimeData(elapsed);
+            log.debug("{}: ping time is {} msec", Peer.this.toString(), elapsed);
+            future.set(elapsed);
+            future = null;
+        }
     }
 }

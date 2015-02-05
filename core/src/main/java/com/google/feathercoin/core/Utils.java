@@ -16,6 +16,9 @@
 
 package com.google.feathercoin.core;
 
+
+import com.google.feathercoin.crypto.hasher;
+
 import org.spongycastle.crypto.digests.RIPEMD160Digest;
 import org.spongycastle.util.encoders.Hex;
 import com.lambdaworks.crypto.SCrypt;
@@ -31,25 +34,15 @@ import java.util.Date;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+//import com.crypto.algo.neoscryptj.hasher;
+
 /**
  * A collection of various utility methods that are helpful for working with the Feathercoin protocol.
  * To enable debug logging from the library, run with -Dfeathercoinj.logging=true on your command line.
  */
 public class Utils {
-    private static final MessageDigest digest;
-    static {
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);  // Can't happen.
-        }
-    }
-
     /** The string that prefixes all text messages signed using Feathercoin keys. */
     public static final String LITECOIN_SIGNED_MESSAGE_HEADER = "Feathercoin Signed Message:\n";
-
-    // TODO: Replace this nanocoins business with something better.
-
     /**
      * How many "nanocoins" there are in a Feathercoin.
      * <p/>
@@ -58,7 +51,6 @@ public class Utils {
      * of them in a coin (whereas one would expect 1 billion.
      */
     public static final BigInteger COIN = new BigInteger("100000000", 10);
-
     /**
      * How many "nanocoins" there are in 0.01 Feathercoins.
      * <p/>
@@ -67,6 +59,22 @@ public class Utils {
      * of them in a coin (whereas one would expect 1 billion).
      */
     public static final BigInteger CENT = new BigInteger("1000000", 10);
+
+    // TODO: Replace this nanocoins business with something better.
+    private static final MessageDigest digest;
+    static {
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);  // Can't happen.
+        }
+    }
+    // 00000001, 00000010, 00000100, 00001000, ...
+    private static final int bitMask[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    /**
+     * If non-null, overrides the return value of now().
+     */
+    public static volatile Date mockTime;
 
     /**
      * Convert an amount expressed in the way humans are used to into nanocoins.
@@ -95,7 +103,7 @@ public class Utils {
         int start = (biBytes.length == numBytes + 1) ? 1 : 0;
         int length = Math.min(biBytes.length, numBytes);
         System.arraycopy(biBytes, start, bytes, numBytes - length, length);
-        return bytes;        
+        return bytes;
     }
 
     /**
@@ -116,21 +124,21 @@ public class Utils {
         out[offset + 2] = (byte) (0xFF & (val >> 8));
         out[offset + 3] = (byte) (0xFF & (val >> 0));
     }
-
+    
     public static void uint32ToByteArrayLE(long val, byte[] out, int offset) {
         out[offset + 0] = (byte) (0xFF & (val >> 0));
         out[offset + 1] = (byte) (0xFF & (val >> 8));
         out[offset + 2] = (byte) (0xFF & (val >> 16));
         out[offset + 3] = (byte) (0xFF & (val >> 24));
     }
-
+    
     public static void uint32ToByteStreamLE(long val, OutputStream stream) throws IOException {
         stream.write((int) (0xFF & (val >> 0)));
         stream.write((int) (0xFF & (val >> 8)));
         stream.write((int) (0xFF & (val >> 16)));
         stream.write((int) (0xFF & (val >> 24)));
     }
-    
+        
     public static void int64ToByteStreamLE(long val, OutputStream stream) throws IOException {
         stream.write((int) (0xFF & (val >> 0)));
         stream.write((int) (0xFF & (val >> 8)));
@@ -142,6 +150,13 @@ public class Utils {
         stream.write((int) (0xFF & (val >> 56)));
     }
 
+    public static BigInteger changeEndian(BigInteger val, int length)
+    {
+        byte[] bytes = bigIntegerToBytes(val,length);
+        bytes = reverseBytes(bytes);
+        return new BigInteger(bytes);
+    }
+    
     public static void uint64ToByteStreamLE(BigInteger val, OutputStream stream) throws IOException {
         byte[] bytes = val.toByteArray();
         if (bytes.length > 8) {
@@ -161,10 +176,17 @@ public class Utils {
     public static byte[] doubleDigest(byte[] input) {
         return doubleDigest(input, 0, input.length);
     }
-    
-    public static byte[] scryptDigest(byte[] input) {
+
+    public static byte[] scryptDigest(byte[] input, boolean fNeoscrypt) {
+        int profile= 0x3;
+        if (fNeoscrypt) {profile = 0x80000620; }
+
         try {
-            return SCrypt.scrypt(input, input, 1024, 1, 1, 32);
+            byte[] result = hasher.getHash(input, profile);
+            if (result.length != 32) {
+                throw new RuntimeException("hasher result lenght != 32");
+            }
+            return result;
         } catch (Exception e) {
             return null;
         }
@@ -211,7 +233,7 @@ public class Utils {
     public static boolean isLessThanUnsigned(long n1, long n2) {
         return (n1 < n2) ^ ((n1 < 0) != (n2 < 0));
     }
-
+    
     /**
      * Returns the given byte array hex encoded.
      */
@@ -225,7 +247,6 @@ public class Utils {
         }
         return buf.toString();
     }
-
 
     /**
      * Returns a copy of the given byte array in reverse order.
@@ -241,16 +262,16 @@ public class Utils {
     
     /**
      * Returns a copy of the given byte array with the bytes of each double-word (4 bytes) reversed.
-     * 
+     *
      * @param bytes length must be divisible by 4.
      * @param trimLength trim output to this length.  If positive, must be divisible by 4.
      */
     public static byte[] reverseDwordBytes(byte[] bytes, int trimLength) {
         checkArgument(bytes.length % 4 == 0);
         checkArgument(trimLength < 0 || trimLength % 4 == 0);
-        
+
         byte[] rev = new byte[trimLength >= 0 && bytes.length > trimLength ? trimLength : bytes.length];
-        
+
         for (int i = 0; i < rev.length; i += 4) {
             System.arraycopy(bytes, i, rev, i , 4);
             for (int j = 0; j < 4; j++) {
@@ -266,7 +287,7 @@ public class Utils {
                 ((bytes[offset++] & 0xFFL) << 16) |
                 ((bytes[offset] & 0xFFL) << 24);
     }
-    
+
     public static long readInt64(byte[] bytes, int offset) {
         return ((bytes[offset++] & 0xFFL) << 0) |
                ((bytes[offset++] & 0xFFL) << 8) |
@@ -288,7 +309,7 @@ public class Utils {
     public static int readUint16BE(byte[] bytes, int offset) {
         return ((bytes[offset] & 0xff) << 8) | bytes[offset + 1] & 0xff;
     }
-
+    
     /**
      * Calculates RIPEMD160(SHA256(input)). This is used in Address calculations.
      */
@@ -330,11 +351,11 @@ public class Utils {
     
     /**
      * <p>
-     * Returns the given value as a plain string denominated in BTC.   
+     * Returns the given value as a plain string denominated in BTC.
      * The result is unformatted with no trailing zeroes.
      * For instance, an input value of BigInteger.valueOf(150000) nanocoin gives an output string of "0.0015" BTC
      * </p>
-     * 
+     *
      * @param value The value in nanocoins to convert to a string (denominated in BTC)
      * @throws IllegalArgumentException
      *            If the input value is null
@@ -343,7 +364,7 @@ public class Utils {
         if (value == null) {
             throw new IllegalArgumentException("Value cannot be null");
         }
-                
+
         BigDecimal valueInBTC = new BigDecimal(value).divide(new BigDecimal(Utils.COIN));
         return valueInBTC.toPlainString();
     }
@@ -370,7 +391,7 @@ public class Utils {
         BigInteger result = new BigInteger(buf);
         return isNegative ? result.negate() : result;
     }
-    
+
     /**
      * MPI encoded numbers are produced by the OpenSSL BN_bn2mpi function. They consist of
      * a 4 byte big endian length field, followed by the stated number of bytes representing
@@ -424,11 +445,6 @@ public class Utils {
     }
 
     /**
-     * If non-null, overrides the return value of now().
-     */
-    public static volatile Date mockTime;
-
-    /**
      * Advances (or rewinds) the mock clock by the given number of seconds.
      */
     public static Date rollMockClock(int seconds) {
@@ -437,7 +453,7 @@ public class Utils {
         mockTime = new Date(mockTime.getTime() + (seconds * 1000));
         return mockTime;
     }
-
+    
     /**
      * Returns the current time, or a mocked out equivalent.
      */
@@ -447,7 +463,7 @@ public class Utils {
         else
             return new Date();
     }
-    
+
     public static byte[] copyOf(byte[] in, int length) {
         byte[] out = new byte[length];
         System.arraycopy(in, 0, out, 0, Math.min(length, in.length));
@@ -474,7 +490,7 @@ public class Utils {
     public static boolean isWindows() {
         return System.getProperty("os.name").toLowerCase().contains("win");
     }
-
+    
     /**
      * <p>Given a textual message, returns a byte buffer formatted as follows:</p>
      *
@@ -496,9 +512,6 @@ public class Utils {
         System.arraycopy(bytes, 0, result, cursor, bytes.length);
         return result;
     }
-    
-    // 00000001, 00000010, 00000100, 00001000, ...
-    private static final int bitMask[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
     
     // Checks if the given bit is set in data
     public static boolean checkBitLE(byte[] data, int index) {

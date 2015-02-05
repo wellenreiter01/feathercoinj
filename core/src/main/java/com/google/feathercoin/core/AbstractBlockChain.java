@@ -75,11 +75,22 @@ import static com.google.common.base.Preconditions.*;
  */
 public abstract class AbstractBlockChain {
     private static final Logger log = LoggerFactory.getLogger(AbstractBlockChain.class);
-    protected ReentrantLock lock = Locks.lock("blockchain");
-
+    // February 16th 2012
+    private static Date testnetDiffDate = new Date(1329264000000L);
+    protected final NetworkParameters params;
     /** Keeps a map of block hashes to StoredBlocks. */
     private final BlockStore blockStore;
-
+    // TODO: Scrap this and use a proper read/write for all of the block chain objects.
+    // The chainHead field is read/written synchronized with this object rather than BlockChain. However writing is
+    // also guaranteed to happen whilst BlockChain is synchronized (see setChainHead). The goal of this is to let
+    // clients quickly access the chain head even whilst the block chain is downloading and thus the BlockChain is
+    // locked most of the time.
+    private final Object chainHeadLock = new Object();
+    private final CopyOnWriteArrayList<BlockChainListener> listeners;
+    // Holds blocks that we have received but can't plug into the chain yet, eg because they were created whilst we
+    // were downloading the block chain.
+    private final LinkedHashMap<Sha256Hash, OrphanBlock> orphanBlocks = new LinkedHashMap<Sha256Hash, OrphanBlock>();
+    protected ReentrantLock lock = Locks.lock("blockchain");
     /**
      * Tracks the top of the best known chain.<p>
      *
@@ -89,33 +100,9 @@ public abstract class AbstractBlockChain {
      * potentially invalidating transactions in our wallet.
      */
     protected StoredBlock chainHead;
-
-    // TODO: Scrap this and use a proper read/write for all of the block chain objects.
-    // The chainHead field is read/written synchronized with this object rather than BlockChain. However writing is
-    // also guaranteed to happen whilst BlockChain is synchronized (see setChainHead). The goal of this is to let
-    // clients quickly access the chain head even whilst the block chain is downloading and thus the BlockChain is
-    // locked most of the time.
-    private final Object chainHeadLock = new Object();
-
-    protected final NetworkParameters params;
-    private final CopyOnWriteArrayList<BlockChainListener> listeners;
-
-    // Holds a block header and, optionally, a list of tx hashes or block's transactions
-    protected static class OrphanBlock {
-        Block block;
-        Set<Sha256Hash> filteredTxHashes;
-        List<Transaction> filteredTxn;
-        OrphanBlock(Block block, Set<Sha256Hash> filteredTxHashes, List<Transaction> filteredTxn) {
-            Preconditions.checkArgument((block.transactions == null && filteredTxHashes != null && filteredTxn != null)
-                    || (block.transactions != null && filteredTxHashes == null && filteredTxn == null));
-            this.block = block;
-            this.filteredTxHashes = filteredTxHashes;
-            this.filteredTxn = filteredTxn;
-        }
-    }
-    // Holds blocks that we have received but can't plug into the chain yet, eg because they were created whilst we
-    // were downloading the block chain.
-    private final LinkedHashMap<Sha256Hash, OrphanBlock> orphanBlocks = new LinkedHashMap<Sha256Hash, OrphanBlock>();
+    // Stat counters.
+    private long statsLastTime = System.currentTimeMillis();
+    private long statsBlocksAdded;
 
     /**
      * Constructs a BlockChain connected to the given list of listeners (eg, wallets) and a store.
@@ -130,6 +117,85 @@ public abstract class AbstractBlockChain {
     }
 
     /**
+     * Gets the median timestamp of the last 11 blocks
+     */
+    private static long getMedianTimestampOfRecentBlocks(StoredBlock storedBlock,
+                                                         BlockStore store) throws BlockStoreException {
+        long[] timestamps = new long[11];
+        int unused = 9;
+        timestamps[10] = storedBlock.getHeader().getTimeSeconds();
+        while (unused >= 0 && (storedBlock = storedBlock.getPrev(store)) != null)
+            timestamps[unused--] = storedBlock.getHeader().getTimeSeconds();
+
+        Arrays.sort(timestamps, unused+1, 11);
+        return timestamps[unused + (11-unused)/2];
+    }
+    
+    /**
+     * Returns the set of contiguous blocks between 'higher' and 'lower'. Higher is included, lower is not.
+     */
+    private static LinkedList<StoredBlock> getPartialChain(StoredBlock higher, StoredBlock lower, BlockStore store) throws BlockStoreException {
+        checkArgument(higher.getHeight() > lower.getHeight(), "higher and lower are reversed");
+        LinkedList<StoredBlock> results = new LinkedList<StoredBlock>();
+        StoredBlock cursor = higher;
+        while (true) {
+            results.add(cursor);
+            cursor = checkNotNull(cursor.getPrev(store), "Ran off the end of the chain");
+            if (cursor.equals(lower)) break;
+        }
+        return results;
+    }
+    
+    /**
+     * Locates the point in the chain at which newStoredBlock and chainHead diverge. Returns null if no split point was
+     * found (ie they are not part of the same chain). Returns newChainHead or chainHead if they don't actually diverge
+     * but are part of the same chain.
+     */
+    private static StoredBlock findSplit(StoredBlock newChainHead, StoredBlock oldChainHead,
+                                         BlockStore store) throws BlockStoreException {
+        StoredBlock currentChainCursor = oldChainHead;
+        StoredBlock newChainCursor = newChainHead;
+        // Loop until we find the block both chains have in common. Example:
+        //
+        //    A -> B -> C -> D
+        //         \--> E -> F -> G
+        //
+        // findSplit will return block B. oldChainHead = D and newChainHead = G.
+        while (!currentChainCursor.equals(newChainCursor)) {
+            if (currentChainCursor.getHeight() > newChainCursor.getHeight()) {
+                currentChainCursor = currentChainCursor.getPrev(store);
+                checkNotNull(currentChainCursor, "Attempt to follow an orphan chain");
+            } else {
+                newChainCursor = newChainCursor.getPrev(store);
+                checkNotNull(newChainCursor, "Attempt to follow an orphan chain");
+            }
+        }
+        return currentChainCursor;
+    }
+    
+    private static void sendTransactionsToListener(StoredBlock block, NewBlockType blockType,
+                                                   BlockChainListener listener,
+                                                   List<Transaction> transactions,
+                                                   boolean clone) throws VerificationException {
+        for (Transaction tx : transactions) {
+            try {
+                if (listener.isTransactionRelevant(tx)) {
+                    if (clone)
+                        tx = new Transaction(tx.params, tx.feathercoinSerialize());
+                    listener.receiveFromBlock(tx, block, blockType);
+                }
+            } catch (ScriptException e) {
+                // We don't want scripts we don't understand to break the block chain so just note that this tx was
+                // not scanned here and continue.
+                log.warn("Failed to parse a script: " + e.toString());
+            } catch (ProtocolException e) {
+                // Failed to duplicate tx, should never happen.
+                throw new RuntimeException(e);
+            }
+        }
+    }
+    
+    /**
      * Add a wallet to the BlockChain. Note that the wallet will be unaffected by any blocks received while it
      * was not part of this BlockChain. This method is useful if the wallet has just been created, and its keys
      * have never been in use, or if the wallet has been loaded along with the BlockChain. Note that adding multiple
@@ -138,21 +204,21 @@ public abstract class AbstractBlockChain {
     public void addWallet(Wallet wallet) {
         listeners.add(wallet);
     }
-
+    
     /**
      * Adds a generic {@link BlockChainListener} listener to the chain.
      */
     public void addListener(BlockChainListener listener) {
         listeners.add(listener);
     }
-
+    
     /**
      * Removes the given {@link BlockChainListener} from the chain.
      */
     public void removeListener(BlockChainListener listener) {
         listeners.remove(listener);
     }
-    
+
     /**
      * Returns the {@link BlockStore} the chain was constructed with. You can use this to iterate over the chain.
      */
@@ -188,7 +254,7 @@ public abstract class AbstractBlockChain {
      * that were started by disconnectTransactions/connectTransactions.
      */
     protected abstract void doSetChainHead(StoredBlock chainHead) throws BlockStoreException;
-    
+
     /**
      * Called if we (possibly) previously called disconnectTransaction/connectTransactions,
      * but will not be calling preSetChainHead as a block failed verification.
@@ -224,7 +290,7 @@ public abstract class AbstractBlockChain {
                     block.toString(), e);
         }
     }
-    
+
     /**
      * Processes a received block and tries to add it to the chain. If there's something wrong with the block an
      * exception is thrown. If the block is OK but cannot be connected to the chain at this time, returns false.
@@ -258,7 +324,7 @@ public abstract class AbstractBlockChain {
                     block.toString(), e);
         }
     }
-    
+
     /**
      * Whether or not we are maintaining a set of unspent outputs and are verifying all transactions.
      * Also indicates that all calls to add() should provide a block containing transactions
@@ -275,7 +341,7 @@ public abstract class AbstractBlockChain {
      * @return The full set of all changes made to the set of open transaction outputs.
      */
     protected abstract TransactionOutputChanges connectTransactions(int height, Block block) throws VerificationException, BlockStoreException;
-
+    
     /**
      * Load newBlock from BlockStore and connect its transactions, returning changes to the set of unspent transactions.
      * If an error is encountered in a transaction, no changes should be made to the underlying BlockStore.
@@ -285,11 +351,7 @@ public abstract class AbstractBlockChain {
      * @throws BlockStoreException if the block store had an underlying error or newBlock does not exist in the block store at all.
      * @return The full set of all changes made to the set of open transaction outputs.
      */
-    protected abstract TransactionOutputChanges connectTransactions(StoredBlock newBlock) throws VerificationException, BlockStoreException, PrunedException;    
-    
-    // Stat counters.
-    private long statsLastTime = System.currentTimeMillis();
-    private long statsBlocksAdded;
+    protected abstract TransactionOutputChanges connectTransactions(StoredBlock newBlock) throws VerificationException, BlockStoreException, PrunedException;
 
     // filteredTxHashList and filteredTxn[i].GetHash() should be mutually exclusive
     private boolean add(Block block, Set<Sha256Hash> filteredTxHashList, List<Transaction> filteredTxn, boolean tryConnecting)
@@ -383,12 +445,12 @@ public abstract class AbstractBlockChain {
             for (Transaction tx : block.transactions)
                 if (!tx.isFinal(storedPrev.getHeight() + 1, block.getTimeSeconds()))
                    throw new VerificationException("Block contains non-final transaction");
-        
+
         StoredBlock head = getChainHead();
         if (storedPrev.equals(head)) {
             if (expensiveChecks && block.getTimeSeconds() <= getMedianTimestampOfRecentBlocks(head, blockStore))
                 throw new VerificationException("Block's timestamp is too early " + block.getTimeSeconds() + " : " + getMedianTimestampOfRecentBlocks(head, blockStore));
-            
+
             // This block connects to the best known block, it is a normal continuation of the system.
             TransactionOutputChanges txOutChanges = null;
             if (shouldVerifyTransactions())
@@ -452,7 +514,7 @@ public abstract class AbstractBlockChain {
                         new Object[]{splitPointHeight, splitPointHash, newBlock.getHeader().getHashAsString()});
                 }
             }
-            
+
             // We may not have any transactions if we received only a header, which can happen during fast catchup.
             // If we do, send them to the wallet but state that they are on a side chain so it knows not to try and
             // spend them until they become activated.
@@ -478,27 +540,12 @@ public abstract class AbstractBlockChain {
                     first = false;
                 }
             }
-            
+
             if (haveNewBestChain)
                 handleNewBestChain(storedPrev, newBlock, block, expensiveChecks);
         }
     }
-    
-    /**
-     * Gets the median timestamp of the last 11 blocks
-     */
-    private static long getMedianTimestampOfRecentBlocks(StoredBlock storedBlock,
-                                                         BlockStore store) throws BlockStoreException {
-        long[] timestamps = new long[11];
-        int unused = 9;
-        timestamps[10] = storedBlock.getHeader().getTimeSeconds();
-        while (unused >= 0 && (storedBlock = storedBlock.getPrev(store)) != null)
-            timestamps[unused--] = storedBlock.getHeader().getTimeSeconds();
-        
-        Arrays.sort(timestamps, unused+1, 11);
-        return timestamps[unused + (11-unused)/2];
-    }
-    
+
     /**
      * Disconnect each transaction in the block (after reading it from the block store)
      * Only called if(shouldVerifyTransactions())
@@ -509,7 +556,7 @@ public abstract class AbstractBlockChain {
 
     /**
      * Called as part of connecting a block when the new block results in a different chain having higher total work.
-     * 
+     *
      * if (shouldVerifyTransactions)
      *     Either newChainHead needs to be in the block store as a FullStoredBlock, or (block != null && block.transactions != null)
      */
@@ -577,86 +624,10 @@ public abstract class AbstractBlockChain {
     }
 
     /**
-     * Returns the set of contiguous blocks between 'higher' and 'lower'. Higher is included, lower is not.
-     */
-    private static LinkedList<StoredBlock> getPartialChain(StoredBlock higher, StoredBlock lower, BlockStore store) throws BlockStoreException {
-        checkArgument(higher.getHeight() > lower.getHeight(), "higher and lower are reversed");
-        LinkedList<StoredBlock> results = new LinkedList<StoredBlock>();
-        StoredBlock cursor = higher;
-        while (true) {
-            results.add(cursor);
-            cursor = checkNotNull(cursor.getPrev(store), "Ran off the end of the chain");
-            if (cursor.equals(lower)) break;
-        }
-        return results;
-    }
-
-    /**
-     * Locates the point in the chain at which newStoredBlock and chainHead diverge. Returns null if no split point was
-     * found (ie they are not part of the same chain). Returns newChainHead or chainHead if they don't actually diverge
-     * but are part of the same chain.
-     */
-    private static StoredBlock findSplit(StoredBlock newChainHead, StoredBlock oldChainHead,
-                                         BlockStore store) throws BlockStoreException {
-        StoredBlock currentChainCursor = oldChainHead;
-        StoredBlock newChainCursor = newChainHead;
-        // Loop until we find the block both chains have in common. Example:
-        //
-        //    A -> B -> C -> D
-        //         \--> E -> F -> G
-        //
-        // findSplit will return block B. oldChainHead = D and newChainHead = G.
-        while (!currentChainCursor.equals(newChainCursor)) {
-            if (currentChainCursor.getHeight() > newChainCursor.getHeight()) {
-                currentChainCursor = currentChainCursor.getPrev(store);
-                checkNotNull(currentChainCursor, "Attempt to follow an orphan chain");
-            } else {
-                newChainCursor = newChainCursor.getPrev(store);
-                checkNotNull(newChainCursor, "Attempt to follow an orphan chain");
-            }
-        }
-        return currentChainCursor;
-    }
-
-    /**
      * @return the height of the best known chain, convenience for <tt>getChainHead().getHeight()</tt>.
      */
     public int getBestChainHeight() {
         return getChainHead().getHeight();
-    }
-
-    public enum NewBlockType {
-        BEST_CHAIN,
-        SIDE_CHAIN
-    }
-
-    private static void sendTransactionsToListener(StoredBlock block, NewBlockType blockType,
-                                                   BlockChainListener listener,
-                                                   List<Transaction> transactions,
-                                                   boolean clone) throws VerificationException {
-        for (Transaction tx : transactions) {
-            try {
-                if (listener.isTransactionRelevant(tx)) {
-                    if (clone)
-                        tx = new Transaction(tx.params, tx.feathercoinSerialize());
-                    listener.receiveFromBlock(tx, block, blockType);
-                }
-            } catch (ScriptException e) {
-                // We don't want scripts we don't understand to break the block chain so just note that this tx was
-                // not scanned here and continue.
-                log.warn("Failed to parse a script: " + e.toString());
-            } catch (ProtocolException e) {
-                // Failed to duplicate tx, should never happen.
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    protected void setChainHead(StoredBlock chainHead) throws BlockStoreException {
-        doSetChainHead(chainHead);
-        synchronized (chainHeadLock) {
-            this.chainHead = chainHead;
-        }
     }
 
     /**
@@ -696,19 +667,17 @@ public abstract class AbstractBlockChain {
         } while (blocksConnectedThisRound > 0);
     }
 
-    // February 16th 2012
-    private static Date testnetDiffDate = new Date(1329264000000L);
-
     /**
      * Throws an exception if the blocks difficulty is not correct.
      */
-    private void checkDifficultyTransitions(StoredBlock storedPrev, Block nextBlock) 
+    private void checkDifficultyTransitions(StoredBlock storedPrev, Block nextBlock)
             throws BlockStoreException, VerificationException {
         checkState(lock.isLocked());
         Block prev = storedPrev.getHeader();
         int nDifficultySwitchHeight33K = 33000;
         int nDifficultySwitchHeight87K = 87948;
         int nDifficultySwitchHeight204K = 204639;
+        int nSwitchAlgoNeoscrypt = 432000;
         int whichDifficultyProtocol = 0; // Default to first
         int nTargetTimespanCurrent = params.targetTimespan * 16; // 3.5 days
         int nActualTimespanMax = nTargetTimespanCurrent*4;
@@ -719,7 +688,7 @@ public abstract class AbstractBlockChain {
         {
             whichDifficultyProtocol = 1;
             nTargetTimespanCurrent = params.targetTimespan * 4; // 7/8 days
-            // The 1st hard fork (1.4142857 aka 41% difficulty limiter) 
+            // The 1st hard fork (1.4142857 aka 41% difficulty limiter)
             nActualTimespanMax = (nTargetTimespanCurrent*99)/70;
             nActualTimespanMin = (nTargetTimespanCurrent*70)/99;
         }
@@ -728,7 +697,7 @@ public abstract class AbstractBlockChain {
         {
             whichDifficultyProtocol = 2;
             nTargetTimespanCurrent = params.targetTimespan; // 7/32 days
-            // The 2nd hard fork (1.0905077 aka 9% difficulty limiter) 
+            // The 2nd hard fork (1.0905077 aka 9% difficulty limiter)
             nActualTimespanMax = (nTargetTimespanCurrent*494)/453;
             nActualTimespanMin = (nTargetTimespanCurrent*453)/494;
         }
@@ -736,19 +705,19 @@ public abstract class AbstractBlockChain {
         {
             whichDifficultyProtocol = 3;
             nTargetTimespanCurrent = 60; // 1 minute
-            // The 3rd hard fork (1.0905077 aka 9% difficulty limiter) 
+            // The 3rd hard fork (1.0905077 aka 9% difficulty limiter)
             nActualTimespanMax = (nTargetTimespanCurrent*494)/453;
             nActualTimespanMin = (nTargetTimespanCurrent*453)/494;
         }
-            
+
         int interval = nTargetTimespanCurrent/params.targetSpacing;
-        
+
        if ((storedPrev.getHeight() + 1) >= nDifficultySwitchHeight204K) {
            interval = nTargetTimespanCurrent/60;
        }
-        
+
         // Is this supposed to be a difficulty transition point?
-        if ((storedPrev.getHeight() + 1) % interval != 0 && 
+        if ((storedPrev.getHeight() + 1) % interval != 0 &&
             (storedPrev.getHeight() + 1) != nDifficultySwitchHeight33K &&
             (storedPrev.getHeight() + 1) != nDifficultySwitchHeight87K &&
             (storedPrev.getHeight() + 1) < nDifficultySwitchHeight204K)
@@ -774,11 +743,11 @@ public abstract class AbstractBlockChain {
         // two weeks after the initial block chain download.
         long now = System.currentTimeMillis();
         StoredBlock cursor = blockStore.get(prev.getHash());
-        
+
         int goBack = interval - 1;
         if (cursor.getHeight() + 1 != interval)
             goBack = interval;
-                    
+
         for (int i = 0; i < goBack; i++) {
             if (cursor == null) {
                 // This should never happen. If it does, it means we are following an incorrect or busted chain.
@@ -805,7 +774,7 @@ public abstract class AbstractBlockChain {
             goBack = interval - 1;
             if (cursor.getHeight() + 1 != interval)
                 goBack = interval;
-                        
+
             for (int i = 0; i < goBack; i++) {
                 if (cursor == null) {
                     // This should never happen. If it does, it means we are following an incorrect or busted chain.
@@ -831,21 +800,21 @@ public abstract class AbstractBlockChain {
 
             log.info("nActualTimespan (damped) = " + nActualTimespan);
 
-            log.info("RETARGET: nActualTimespanLong " + nActualTimespanLong + 
-                     " nActualTimeSpanAvg = " + nActualTimespanAvg + 
+            log.info("RETARGET: nActualTimespanLong " + nActualTimespanLong +
+                     " nActualTimeSpanAvg = " + nActualTimespanAvg +
                      ", nActualTimespan (damped) = " + nActualTimespan);
-        } 
-        
+        }
+
         if(whichDifficultyProtocol == 3) {
             interval *= 480;
             StoredBlock cursorLong = blockStore.get(prev.getHash());
             Block blockIntervalAgoShort = cursorLong.getHeader();
             Block blockIntervalAgoMedium = cursorLong.getHeader();
-            
+
             goBack = interval - 1;
             if (cursorLong.getHeight() + 1 != interval)
                 goBack = interval;
-                        
+
             for (int i = 0; i < goBack; i++) {
                 if (cursorLong == null) {
                     // This should never happen. If it does, it means we are following an incorrect or busted chain.
@@ -862,29 +831,29 @@ public abstract class AbstractBlockChain {
                     log.info("Got block " + cursorLong.getHeight() + " to use for medium calc");
                 }
             }
-            
+
             Block blockIntervalAgoLong = cursorLong.getHeader();
             log.info("Got block " + cursorLong.getHeight() + " to use for long calc");
-                
+
             long nActualTimespanShort = (prev.getTimeSeconds() - blockIntervalAgoShort.getTimeSeconds()) / 15;
             log.info("nActualTimespanShort = " + nActualTimespanShort);
             long nActualTimespanMedium = (prev.getTimeSeconds() - blockIntervalAgoMedium.getTimeSeconds()) / 120;
             log.info("nActualTimespanMedium = " + nActualTimespanMedium);
             long nActualTimespanLong = (prev.getTimeSeconds() - blockIntervalAgoLong.getTimeSeconds()) / 480;
             log.info("nActualTimespanLong = " + nActualTimespanLong);
- 
+
             long nActualTimespanAvg = (nActualTimespanShort + nActualTimespanMedium + nActualTimespanLong) / 3;
-            
+
             // Apply .25 damping
             nActualTimespan = nActualTimespanAvg + (3 * nTargetTimespanCurrent);
             nActualTimespan /= 4;
-            
+
             log.info("nActualTimespan (damped) = " + nActualTimespan);
 
-            log.info("RETARGET: nActualTimespanShort " + nActualTimespanShort + 
-                     " nActualTimespanMedium " + nActualTimespanMedium + 
-                     " nActualTimespanLong " + nActualTimespanLong + 
-                     " nActualTimeSpanAvg = " + nActualTimespanAvg + 
+            log.info("RETARGET: nActualTimespanShort " + nActualTimespanShort +
+                     " nActualTimespanMedium " + nActualTimespanMedium +
+                     " nActualTimespanLong " + nActualTimespanLong +
+                     " nActualTimeSpanAvg = " + nActualTimespanAvg +
                      ", nActualTimespan (damped) = " + nActualTimespan);
         }
 
@@ -901,7 +870,6 @@ public abstract class AbstractBlockChain {
         newDifficulty = newDifficulty.multiply(BigInteger.valueOf(nActualTimespan));
         newDifficulty = newDifficulty.divide(BigInteger.valueOf(nTargetTimespanCurrent));
         log.info("diff/{} = {}", nTargetTimespanCurrent, newDifficulty.toString(16));
-
         if (newDifficulty.compareTo(params.proofOfWorkLimit) > 0) {
             log.info("Difficulty hit proof of work limit: {}", newDifficulty.toString(16));
             newDifficulty = params.proofOfWorkLimit;
@@ -914,10 +882,25 @@ public abstract class AbstractBlockChain {
         BigInteger mask = BigInteger.valueOf(0xFFFFFFL).shiftLeft(accuracyBytes * 8);
         newDifficulty = newDifficulty.and(mask);
 
+
+
+         /*
+        Neoscrypt uses little endian, so we need to swap bytes
+
+        if (storedPrev.getHeight() >=nSwitchAlgoNeoscrypt)
+            newDifficulty= Utils.changeEndian(newDifficulty,16);
+        */
+        log.warn("calculated diff:" + newDifficulty.toString(16) +"\n"+
+        "received Diff: "+ receivedDifficulty.toString(16));
+        /*
+        TODO: enable difficulty check again
+        */
         if (newDifficulty.compareTo(receivedDifficulty) != 0)
             throw new VerificationException("Network provided difficulty bits do not match what was calculated: " +
-                    receivedDifficulty.toString(16) + " vs " + newDifficulty.toString(16) + "TargetTimespan: " + nTargetTimespanCurrent);
-    }
+                    receivedDifficulty.toString(16) + " vs " + newDifficulty.toString(16) + " TargetTimespan: " + nTargetTimespanCurrent);
+   //     log.error("Network provided difficulty bits do not match what was calculated: " +
+   //             receivedDifficulty.toString(16) + " vs " + newDifficulty.toString(16) + " TargetTimespan: " + nTargetTimespanCurrent);
+        }
 
     private void checkTestnetDifficulty(StoredBlock storedPrev, Block prev, Block next) throws VerificationException, BlockStoreException {
         checkState(lock.isLocked());
@@ -977,6 +960,13 @@ public abstract class AbstractBlockChain {
         }
     }
 
+    protected void setChainHead(StoredBlock chainHead) throws BlockStoreException {
+        doSetChainHead(chainHead);
+        synchronized (chainHeadLock) {
+            this.chainHead = chainHead;
+        }
+    }
+
     /**
      * An orphan block is one that does not connect to the chain anywhere (ie we can't find its parent, therefore
      * it's an orphan). Typically this occurs when we are downloading the chain and didn't reach the head yet, and/or
@@ -1023,6 +1013,25 @@ public abstract class AbstractBlockChain {
             long headTime = chainHead.getHeader().getTimeSeconds();
             long estimated = (headTime * 1000) + (1000L * 60L * 10L * offset);
             return new Date(estimated);
+        }
+    }
+
+    public enum NewBlockType {
+        BEST_CHAIN,
+        SIDE_CHAIN
+    }
+
+    // Holds a block header and, optionally, a list of tx hashes or block's transactions
+    protected static class OrphanBlock {
+        Block block;
+        Set<Sha256Hash> filteredTxHashes;
+        List<Transaction> filteredTxn;
+        OrphanBlock(Block block, Set<Sha256Hash> filteredTxHashes, List<Transaction> filteredTxn) {
+            Preconditions.checkArgument((block.transactions == null && filteredTxHashes != null && filteredTxn != null)
+                    || (block.transactions != null && filteredTxHashes == null && filteredTxn == null));
+            this.block = block;
+            this.filteredTxHashes = filteredTxHashes;
+            this.filteredTxn = filteredTxn;
         }
     }
 }
