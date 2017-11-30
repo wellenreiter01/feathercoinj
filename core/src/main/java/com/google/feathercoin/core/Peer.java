@@ -234,7 +234,9 @@ TODO: add message handling for 'checkpoint' message type
                             vPeerVersionMessage.clientVersion, version);
                     e.getChannel().close();
                 }
-            } else if (m instanceof VersionAck) {
+            }  else if (m instanceof AlertMessage) {
+                    // Todo  implement checkpoint handling
+            }  else if (m instanceof VersionAck) {
                 if (vPeerVersionMessage == null) {
                     throw new ProtocolException("got a version ack before version");
                 }
@@ -311,6 +313,9 @@ TODO: add message handling for 'checkpoint' message type
             log.error("Failed to check signature: bug in platform libraries?", t);
         }
     }
+
+
+ 
 
     /** Returns the Netty Pipeline stage handling the high level Feathercoin protocol. */
     public PeerHandler getHandler() {

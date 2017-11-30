@@ -40,7 +40,7 @@ public class NetworkParameters implements Serializable {
     /**
      * The protocol version this library implements.
      */
-    public static final int PROTOCOL_VERSION = 60008;
+    public static final int PROTOCOL_VERSION = 70006;
 
     /**
      * This is the latest alert key used in Feathercoin.

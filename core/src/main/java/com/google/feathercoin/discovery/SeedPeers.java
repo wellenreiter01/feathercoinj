@@ -32,7 +32,8 @@ public class SeedPeers implements PeerDiscovery {
     private int pnseedIndex;
 
     public SeedPeers(NetworkParameters params) {
-        this.params = params;
+        this.params = params; 
+        
     }
 
     /**
@@ -89,8 +90,9 @@ public class SeedPeers implements PeerDiscovery {
             /**
             * List of IPv4-addresses in hex code
             */
-                    0x8BA2D843, 0x2E040065, 0x68813971, 0x2D4C8334, 0x2E7F0C21, 0x904C478D,
-                    0x2EBC2C14, 0xBCA5FEBF
+                    0x43D8A28B, 0x6500042E, 0x71398168, 0x34834c2d, 0x210C7F2E, 0x8D474C90,
+                    0x142CBC2E, 0xBFFEA5BC, 0x142cbc2E, 0xB39B5A32, 0x00C31E5F, 0x3B78C063,
+                    0x73B95E4E, 0x742CB0BC, 0x8AB417D9, 0x924B00BC, 0x1D98336C, 0x2892BD48
             };
 
     public void shutdown() {
