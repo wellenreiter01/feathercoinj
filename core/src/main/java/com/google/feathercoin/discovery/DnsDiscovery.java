@@ -52,9 +52,8 @@ public class DnsDiscovery implements PeerDiscovery {
     private NetworkParameters netParams;
 
     public static final String[] defaultHosts = new String[]{
-            "dnsseed.feathercoin.com",
-            "dnsseed.neoscrypt.de",
-            "fsight.chain.tips"
+            "feathercoin.com",
+            "dnsseed.feathercoin.com"
     };
 
     /**
@@ -117,6 +116,9 @@ public class DnsDiscovery implements PeerDiscovery {
         }
         if (addrs.size() == 0) {
             throw new PeerDiscoveryException("Unable to find any peers via DNS");
+        }
+        else {
+            log.info("Found {} peers via DNS", addrs.size());
         }
         ArrayList<InetSocketAddress> shuffledAddrs = new ArrayList<InetSocketAddress>(addrs);
         Collections.shuffle(shuffledAddrs);

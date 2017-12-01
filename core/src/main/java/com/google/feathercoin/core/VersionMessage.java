@@ -73,7 +73,7 @@ public class VersionMessage extends Message {
     public boolean relayTxesBeforeFilter;
 
     /** The version of this library release, as a string. */
-    public static final String LITECOINJ_VERSION = "0.99-SNAPSHOT";
+    public static final String LITECOINJ_VERSION = "0.99";
     /** The value that is prepended to the subVer field of this application. */
     public static final String LIBRARY_SUBVER = "/FeathercoinJ:" + LITECOINJ_VERSION + "/";
 
@@ -261,7 +261,7 @@ public class VersionMessage extends Message {
     /**
      * Appends the given user-agent information to the subVer field. The subVer is composed of a series of
      * name:version pairs separated by slashes in the form of a path. For example a typical subVer field for FeathercoinJ
-     * users might look like "/FeathercoinJ:0.4-SNAPSHOT/MultiBit:1.2/" where libraries come further to the left.<p>
+     * users might look like "/FeathercoinJ:0.4-/MultiBit:1.2/" where libraries come further to the left.<p>
      *
      * There can be as many components as you feel a need for, and the version string can be anything, but it is
      * recommended to use A.B.C where A = major, B = minor and C = revision for software releases, and dates for

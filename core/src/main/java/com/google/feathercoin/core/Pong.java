@@ -21,7 +21,7 @@ import java.io.OutputStream;
 
 public class Pong extends Message {
     /** The smallest protocol version that supports the pong response (BIP 31). Anything beyond version 60000. */
-    public static final int MIN_PROTOCOL_VERSION = 60007;
+    public static final int MIN_PROTOCOL_VERSION = 70005; //desktop wallet 0.9.6.1
 
     private long nonce;
 
