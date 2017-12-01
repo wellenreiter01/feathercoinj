@@ -2,6 +2,7 @@ package com.google.feathercoin.core;
 
 import com.google.feathercoin.core.TransactionConfidence.ConfidenceType;
 import com.google.feathercoin.store.MemoryBlockStore;
+
 import org.junit.Test;
 import org.spongycastle.util.encoders.Hex;
 

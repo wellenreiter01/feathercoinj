@@ -16,8 +16,18 @@
 
 package com.google.feathercoin.store;
 
-import com.google.feathercoin.core.*;
 import com.google.common.collect.Lists;
+import com.google.feathercoin.core.Block;
+import com.google.feathercoin.core.NetworkParameters;
+import com.google.feathercoin.core.ProtocolException;
+import com.google.feathercoin.core.Sha256Hash;
+import com.google.feathercoin.core.StoredBlock;
+import com.google.feathercoin.core.StoredTransactionOutput;
+import com.google.feathercoin.core.StoredUndoableBlock;
+import com.google.feathercoin.core.Transaction;
+import com.google.feathercoin.core.TransactionOutputChanges;
+import com.google.feathercoin.core.VerificationException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +35,13 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.LinkedList;
 import java.util.List;
 

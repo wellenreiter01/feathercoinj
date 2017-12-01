@@ -19,6 +19,7 @@ package com.google.feathercoin.core;
 import com.google.feathercoin.core.TransactionConfidence.ConfidenceType;
 import com.google.feathercoin.store.MemoryBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -27,7 +28,10 @@ import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ChainSplitTest {
     private static final Logger log = LoggerFactory.getLogger(ChainSplitTest.class);

@@ -16,18 +16,17 @@
 
 package com.google.litecoin.examples.toywallet;
 
-import com.google.litecoin.core.*;
+import com.google.common.collect.Lists;
 import com.google.litecoin.discovery.DnsDiscovery;
 import com.google.litecoin.discovery.IrcDiscovery;
 import com.google.litecoin.store.H2FullPrunedBlockStore;
 import com.google.litecoin.store.SPVBlockStore;
 import com.google.litecoin.utils.BriefLogFormatter;
-import com.google.common.collect.Lists;
+
 import org.spongycastle.util.encoders.Hex;
 
-import javax.swing.*;
-import javax.swing.table.AbstractTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
@@ -39,6 +38,13 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.SwingUtilities;
+import javax.swing.table.AbstractTableModel;
 
 /**
  * A GUI demo that lets you watch received transactions as they accumulate confidence.

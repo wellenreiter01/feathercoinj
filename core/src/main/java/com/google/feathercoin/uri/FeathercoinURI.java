@@ -18,11 +18,12 @@
 
 package com.google.feathercoin.uri;
 
+import com.google.common.base.Preconditions;
 import com.google.feathercoin.core.Address;
 import com.google.feathercoin.core.AddressFormatException;
 import com.google.feathercoin.core.NetworkParameters;
 import com.google.feathercoin.core.Utils;
-import com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

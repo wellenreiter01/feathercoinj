@@ -15,10 +15,10 @@
  */
 package com.google.feathercoin.crypto;
 
-import java.io.Serializable;
-
 import org.feathercoinj.wallet.Protos.Wallet.EncryptionType;
 import org.spongycastle.crypto.params.KeyParameter;
+
+import java.io.Serializable;
 
 /**
  * <p>A KeyCrypter can be used to encrypt and decrypt a message. The sequence of events to encrypt and then decrypt

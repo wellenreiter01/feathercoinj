@@ -15,8 +15,9 @@
  */
 package com.google.feathercoin.crypto;
 
-import java.io.Serializable;
-import java.security.SecureRandom;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.lambdaworks.crypto.SCrypt;
 
 import org.feathercoinj.wallet.Protos;
 import org.feathercoinj.wallet.Protos.ScryptParameters;
@@ -30,9 +31,8 @@ import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.crypto.params.ParametersWithIV;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
-import com.lambdaworks.crypto.SCrypt;
+import java.io.Serializable;
+import java.security.SecureRandom;
 
 /**
  * <p>This class encrypts and decrypts byte arrays and strings using scrypt as the

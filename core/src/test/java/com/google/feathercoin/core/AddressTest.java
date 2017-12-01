@@ -21,7 +21,9 @@ import org.spongycastle.util.encoders.Hex;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class AddressTest {
     static final NetworkParameters testParams = NetworkParameters.testNet();

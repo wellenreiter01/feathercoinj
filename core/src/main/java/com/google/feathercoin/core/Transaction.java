@@ -16,19 +16,35 @@
 
 package com.google.feathercoin.core;
 
-import com.google.feathercoin.core.TransactionConfidence.ConfidenceType;
 import com.google.common.base.Preconditions;
+import com.google.feathercoin.core.TransactionConfidence.ConfidenceType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static com.google.feathercoin.core.Utils.*;
+import static com.google.feathercoin.core.Utils.bytesToHexString;
+import static com.google.feathercoin.core.Utils.doubleDigest;
+import static com.google.feathercoin.core.Utils.feathercoinValueToFriendlyString;
+import static com.google.feathercoin.core.Utils.reverseBytes;
+import static com.google.feathercoin.core.Utils.uint32ToByteStreamLE;
 
 /**
  * <p>A transaction represents the movement of coins from some addresses to some other addresses. It can also represent

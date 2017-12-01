@@ -1,6 +1,12 @@
 package com.google.feathercoin.core;
 
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.AbstractChannelSink;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.MessageEvent;
 
 import static org.jboss.netty.channel.Channels.fireChannelConnected;
 

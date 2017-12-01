@@ -17,6 +17,7 @@
 package com.google.feathercoin.core;
 
 import com.google.feathercoin.utils.BriefLogFormatter;
+
 import org.junit.Before;
 import org.junit.Test;
 

@@ -16,11 +16,18 @@
 
 package com.google.feathercoin.core;
 
-import com.google.feathercoin.core.Peer.PeerHandler;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.feathercoin.core.Peer.PeerHandler;
+
 import org.easymock.Capture;
 import org.easymock.CaptureType;
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.DefaultExceptionEvent;
+import org.jboss.netty.channel.DownstreamMessageEvent;
+import org.jboss.netty.channel.UpstreamChannelStateEvent;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,9 +38,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import static com.google.feathercoin.core.TestUtils.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static com.google.feathercoin.core.TestUtils.createFakeBlock;
+import static com.google.feathercoin.core.TestUtils.createFakeTx;
+import static com.google.feathercoin.core.TestUtils.makeSolvedTestBlock;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.eq;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class PeerTest extends TestWithNetworkConnections {
     private Peer peer;

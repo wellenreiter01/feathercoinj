@@ -23,9 +23,9 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.feathercoin.core.Utils.uint32ToByteStreamLE;
 import static com.google.feathercoin.core.Utils.uint64ToByteStreamLE;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * A PeerAddress holds an IP address and port number representing the network location of

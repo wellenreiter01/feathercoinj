@@ -16,7 +16,6 @@
 
 package com.google.litecoin.examples;
 
-import com.google.litecoin.core.*;
 import com.google.litecoin.store.MemoryBlockStore;
 
 import java.math.BigInteger;

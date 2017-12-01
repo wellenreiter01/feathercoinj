@@ -19,7 +19,7 @@ package com.google.feathercoin.core;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.BlockStoreException;
 
-import java.io.*;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 

@@ -16,6 +16,10 @@
 
 package com.google.litecoin.examples;
 
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.litecoin.core.NetworkParameters;
 import com.google.litecoin.core.TCPNetworkConnection;
 import com.google.litecoin.core.VersionMessage;
@@ -23,10 +27,6 @@ import com.google.litecoin.discovery.DnsDiscovery;
 import com.google.litecoin.discovery.IrcDiscovery;
 import com.google.litecoin.discovery.PeerDiscoveryException;
 import com.google.litecoin.utils.BriefLogFormatter;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

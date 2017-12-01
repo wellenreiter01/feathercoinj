@@ -22,12 +22,16 @@ import com.google.feathercoin.core.Address;
 import com.google.feathercoin.core.AddressFormatException;
 import com.google.feathercoin.core.NetworkParameters;
 import com.google.feathercoin.core.Utils;
+
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
 
 import static junit.framework.Assert.assertEquals;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class FeathercoinURITest {
 

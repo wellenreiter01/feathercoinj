@@ -16,8 +16,10 @@
 
 package com.google.feathercoin.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import com.google.feathercoin.core.AbstractBlockChain.NewBlockType;
+import com.google.feathercoin.core.Wallet.BalanceType;
+
+import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -25,10 +27,8 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.List;
 
-import org.junit.Test;
-
-import com.google.feathercoin.core.AbstractBlockChain.NewBlockType;
-import com.google.feathercoin.core.Wallet.BalanceType;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test that an example production coinbase transactions can be added to a wallet ok.

@@ -21,6 +21,7 @@ import com.google.feathercoin.core.Transaction.SigHash;
 import com.google.feathercoin.store.FullPrunedBlockStore;
 import com.google.feathercoin.store.MemoryFullPrunedBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

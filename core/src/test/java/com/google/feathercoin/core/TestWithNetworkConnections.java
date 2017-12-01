@@ -19,9 +19,18 @@ package com.google.feathercoin.core;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.MemoryBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
+
 import org.easymock.EasyMock;
 import org.easymock.IMocksControl;
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelState;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.UpstreamChannelStateEvent;
+import org.jboss.netty.channel.UpstreamMessageEvent;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

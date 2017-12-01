@@ -1,10 +1,25 @@
 package com.google.feathercoin.store;
 
 
-import com.google.feathercoin.core.*;
+import com.google.feathercoin.core.AbstractWalletEventListener;
+import com.google.feathercoin.core.Address;
+import com.google.feathercoin.core.Block;
+import com.google.feathercoin.core.BlockChain;
+import com.google.feathercoin.core.BlockTest;
+import com.google.feathercoin.core.ECKey;
+import com.google.feathercoin.core.NetworkParameters;
+import com.google.feathercoin.core.PeerAddress;
+import com.google.feathercoin.core.Sha256Hash;
+import com.google.feathercoin.core.TestUtils;
+import com.google.feathercoin.core.Transaction;
+import com.google.feathercoin.core.TransactionConfidence;
 import com.google.feathercoin.core.TransactionConfidence.ConfidenceType;
+import com.google.feathercoin.core.Utils;
+import com.google.feathercoin.core.Wallet;
+import com.google.feathercoin.crypto.KeyCrypter;
 import com.google.feathercoin.utils.BriefLogFormatter;
 import com.google.protobuf.ByteString;
+
 import org.feathercoinj.wallet.Protos;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,12 +28,20 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 
 import static com.google.feathercoin.core.TestUtils.createFakeTx;
-import static org.junit.Assert.*;
-
-import com.google.feathercoin.crypto.KeyCrypter;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class WalletProtobufSerializerTest {
     static final NetworkParameters params = NetworkParameters.unitTests();

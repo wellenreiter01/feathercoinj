@@ -16,13 +16,27 @@
 
 package com.google.feathercoin.store;
 
-import com.google.feathercoin.core.*;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.feathercoin.core.NetworkParameters;
+import com.google.feathercoin.core.Sha256Hash;
+import com.google.feathercoin.core.StoredBlock;
+import com.google.feathercoin.core.StoredTransactionOutput;
+import com.google.feathercoin.core.StoredUndoableBlock;
+import com.google.feathercoin.core.Transaction;
+import com.google.feathercoin.core.TransactionInput;
+import com.google.feathercoin.core.TransactionOutPoint;
+import com.google.feathercoin.core.TransactionOutput;
+import com.google.feathercoin.core.VerificationException;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 /**

@@ -20,6 +20,7 @@ import com.google.feathercoin.core.Wallet.BalanceType;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.MemoryBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,7 +30,12 @@ import java.util.Date;
 
 import static com.google.feathercoin.core.TestUtils.createFakeBlock;
 import static com.google.feathercoin.core.TestUtils.createFakeTx;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 // Handling of chain splits/reorgs are in ChainSplitTests.
 

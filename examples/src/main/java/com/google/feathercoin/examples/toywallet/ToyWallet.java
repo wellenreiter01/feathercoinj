@@ -16,18 +16,17 @@
 
 package com.google.feathercoin.examples.toywallet;
 
-import com.google.feathercoin.core.*;
+import com.google.common.collect.Lists;
 import com.google.feathercoin.discovery.DnsDiscovery;
 import com.google.feathercoin.discovery.IrcDiscovery;
 import com.google.feathercoin.store.H2FullPrunedBlockStore;
 import com.google.feathercoin.store.SPVBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
-import com.google.common.collect.Lists;
+
 import org.spongycastle.util.encoders.Hex;
 
-import javax.swing.*;
-import javax.swing.table.AbstractTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
@@ -39,6 +38,13 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.SwingUtilities;
+import javax.swing.table.AbstractTableModel;
 
 /**
  * A GUI demo that lets you watch received transactions as they accumulate confidence.

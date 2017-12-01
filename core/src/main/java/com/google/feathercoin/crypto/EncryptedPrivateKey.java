@@ -15,9 +15,9 @@
  */
 package com.google.feathercoin.crypto;
 
-import java.util.Arrays;
-
 import com.google.common.base.Preconditions;
+
+import java.util.Arrays;
 
 /**
  * <p>An EncryptedPrivateKey contains the information produced after encrypting the private key bytes of an ECKey.</p>

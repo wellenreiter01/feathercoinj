@@ -20,6 +20,7 @@ import com.google.feathercoin.core.Address;
 import com.google.feathercoin.core.ECKey;
 import com.google.feathercoin.core.NetworkParameters;
 import com.google.feathercoin.core.StoredBlock;
+
 import org.junit.Test;
 
 import java.io.File;

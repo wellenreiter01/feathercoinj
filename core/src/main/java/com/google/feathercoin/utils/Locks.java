@@ -20,8 +20,6 @@ import com.google.common.util.concurrent.CycleDetectingLockFactory;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.google.common.base.Preconditions.checkState;
-
 /**
  * A wrapper around explicit lock creation that lets you control whether feathercoinj performs cycle detection or not.
  */

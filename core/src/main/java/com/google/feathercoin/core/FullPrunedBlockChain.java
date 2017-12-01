@@ -18,6 +18,7 @@ package com.google.feathercoin.core;
 
 import com.google.feathercoin.store.BlockStoreException;
 import com.google.feathercoin.store.FullPrunedBlockStore;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +26,12 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 import static com.google.common.base.Preconditions.checkState;
 

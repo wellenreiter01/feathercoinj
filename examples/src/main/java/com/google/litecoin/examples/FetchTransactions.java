@@ -16,11 +16,10 @@
 
 package com.google.litecoin.examples;
 
-import com.google.litecoin.core.*;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.litecoin.store.BlockStore;
 import com.google.litecoin.store.MemoryBlockStore;
 import com.google.litecoin.utils.BriefLogFormatter;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import java.net.InetAddress;
 import java.util.List;

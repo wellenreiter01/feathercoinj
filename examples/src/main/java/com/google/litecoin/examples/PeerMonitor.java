@@ -16,26 +16,38 @@
 
 package com.google.litecoin.examples;
 
+import com.google.common.collect.Lists;
 import com.google.litecoin.core.AbstractPeerEventListener;
 import com.google.litecoin.core.NetworkParameters;
 import com.google.litecoin.core.Peer;
 import com.google.litecoin.core.PeerGroup;
 import com.google.litecoin.discovery.DnsDiscovery;
 import com.google.litecoin.utils.BriefLogFormatter;
-import com.google.common.collect.Lists;
 
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableCellRenderer;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
 import java.util.List;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTable;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableCellRenderer;
 
 /**
  * Shows connected peers in a table view, so you can watch as they come and go.

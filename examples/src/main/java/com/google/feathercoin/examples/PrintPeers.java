@@ -16,6 +16,10 @@
 
 package com.google.feathercoin.examples;
 
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.feathercoin.core.NetworkParameters;
 import com.google.feathercoin.core.TCPNetworkConnection;
 import com.google.feathercoin.core.VersionMessage;
@@ -23,10 +27,6 @@ import com.google.feathercoin.discovery.DnsDiscovery;
 import com.google.feathercoin.discovery.IrcDiscovery;
 import com.google.feathercoin.discovery.PeerDiscoveryException;
 import com.google.feathercoin.utils.BriefLogFormatter;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

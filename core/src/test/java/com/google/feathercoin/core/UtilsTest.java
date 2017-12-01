@@ -21,7 +21,11 @@ import org.junit.Test;
 
 import java.math.BigInteger;
 
-import static com.google.feathercoin.core.Utils.*;
+import static com.google.feathercoin.core.Utils.CENT;
+import static com.google.feathercoin.core.Utils.COIN;
+import static com.google.feathercoin.core.Utils.feathercoinValueToFriendlyString;
+import static com.google.feathercoin.core.Utils.feathercoinValueToPlainString;
+import static com.google.feathercoin.core.Utils.toNanoCoins;
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 

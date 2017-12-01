@@ -1,12 +1,16 @@
 package com.google.feathercoin.core;
 
-import com.google.feathercoin.core.Transaction.SigHash;
 import com.google.common.base.Preconditions;
+import com.google.feathercoin.core.Transaction.SigHash;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
 class BlockAndValidity {
     Block block;

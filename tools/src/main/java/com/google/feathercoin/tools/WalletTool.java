@@ -16,17 +16,38 @@
 
 package com.google.feathercoin.tools;
 
-import com.google.feathercoin.core.*;
+import com.google.feathercoin.core.AbstractBlockChain;
+import com.google.feathercoin.core.AbstractPeerEventListener;
+import com.google.feathercoin.core.AbstractWalletEventListener;
+import com.google.feathercoin.core.Address;
+import com.google.feathercoin.core.AddressFormatException;
+import com.google.feathercoin.core.Block;
+import com.google.feathercoin.core.BlockChain;
+import com.google.feathercoin.core.DownloadListener;
+import com.google.feathercoin.core.DumpedPrivateKey;
+import com.google.feathercoin.core.ECKey;
+import com.google.feathercoin.core.FullPrunedBlockChain;
+import com.google.feathercoin.core.NetworkParameters;
+import com.google.feathercoin.core.Peer;
+import com.google.feathercoin.core.PeerAddress;
+import com.google.feathercoin.core.PeerGroup;
+import com.google.feathercoin.core.ScriptException;
+import com.google.feathercoin.core.Transaction;
+import com.google.feathercoin.core.Utils;
+import com.google.feathercoin.core.Wallet;
+import com.google.feathercoin.core.WrongNetworkException;
 import com.google.feathercoin.crypto.KeyCrypterException;
 import com.google.feathercoin.discovery.DnsDiscovery;
 import com.google.feathercoin.discovery.IrcDiscovery;
 import com.google.feathercoin.discovery.PeerDiscovery;
-import com.google.feathercoin.store.*;
+import com.google.feathercoin.store.BlockStore;
+import com.google.feathercoin.store.BlockStoreException;
+import com.google.feathercoin.store.FullPrunedBlockStore;
+import com.google.feathercoin.store.H2FullPrunedBlockStore;
+import com.google.feathercoin.store.SPVBlockStore;
+import com.google.feathercoin.store.WalletProtobufSerializer;
 import com.google.feathercoin.utils.BriefLogFormatter;
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-import joptsimple.OptionSpec;
-import joptsimple.util.DateConverter;
+
 import org.feathercoinj.wallet.Protos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +68,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
+
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import joptsimple.OptionSpec;
+import joptsimple.util.DateConverter;
 
 /**
  * A command line tool for manipulating wallets and working with Feathercoin.<p>

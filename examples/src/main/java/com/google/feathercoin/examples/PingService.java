@@ -16,15 +16,14 @@
 
 package com.google.feathercoin.examples;
 
-import com.google.feathercoin.core.*;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.feathercoin.crypto.KeyCrypterException;
 import com.google.feathercoin.discovery.DnsDiscovery;
 import com.google.feathercoin.discovery.IrcDiscovery;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.SPVBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 
 import java.io.File;
 import java.io.FileInputStream;

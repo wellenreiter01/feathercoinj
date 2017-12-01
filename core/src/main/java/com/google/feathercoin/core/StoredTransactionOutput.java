@@ -16,7 +16,11 @@
 
 package com.google.feathercoin.core;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
 import java.math.BigInteger;
 
 /**

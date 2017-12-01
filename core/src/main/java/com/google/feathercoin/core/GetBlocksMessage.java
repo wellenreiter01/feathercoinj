@@ -53,6 +53,7 @@ public class GetBlocksMessage extends Message {
             locator.add(readHash());
         }
         stopHash = readHash();
+        
     }
 
     public List<Sha256Hash> getLocator() {

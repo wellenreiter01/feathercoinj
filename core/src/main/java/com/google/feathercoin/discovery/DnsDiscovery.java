@@ -16,8 +16,9 @@
 
 package com.google.feathercoin.discovery;
 
-import com.google.feathercoin.core.NetworkParameters;
 import com.google.common.collect.Sets;
+import com.google.feathercoin.core.NetworkParameters;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +29,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>Supports peer discovery through DNS.</p>

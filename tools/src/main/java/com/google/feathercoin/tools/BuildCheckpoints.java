@@ -1,11 +1,20 @@
 package com.google.feathercoin.tools;
 
-import com.google.feathercoin.core.*;
+import com.google.feathercoin.core.AbstractBlockChainListener;
+import com.google.feathercoin.core.BlockChain;
+import com.google.feathercoin.core.CheckpointManager;
+import com.google.feathercoin.core.NetworkParameters;
+import com.google.feathercoin.core.PeerGroup;
+import com.google.feathercoin.core.Sha256Hash;
+import com.google.feathercoin.core.StoredBlock;
+import com.google.feathercoin.core.VerificationException;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.MemoryBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
 
-import java.io.*;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.security.DigestOutputStream;

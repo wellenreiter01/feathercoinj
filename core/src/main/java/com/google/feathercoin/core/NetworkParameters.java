@@ -17,6 +17,7 @@
 package com.google.feathercoin.core;
 
 import com.google.common.base.Objects;
+
 import org.spongycastle.util.encoders.Hex;
 
 import java.io.ByteArrayOutputStream;
@@ -25,8 +26,8 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.feathercoin.core.Utils.COIN;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.feathercoin.core.Utils.COIN;
 
 /**
  * <p>NetworkParameters contains the data needed for working with an instantiation of a Feathercoin chain.</p>

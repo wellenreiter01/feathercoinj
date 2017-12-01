@@ -16,7 +16,6 @@
 
 package com.google.feathercoin.examples;
 
-import com.google.feathercoin.core.*;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.MemoryBlockStore;
 

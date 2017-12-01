@@ -16,8 +16,14 @@
 
 package com.google.feathercoin.store;
 
-import com.google.feathercoin.core.*;
+import com.google.feathercoin.core.Block;
+import com.google.feathercoin.core.NetworkParameters;
+import com.google.feathercoin.core.ProtocolException;
+import com.google.feathercoin.core.Sha256Hash;
+import com.google.feathercoin.core.StoredBlock;
+import com.google.feathercoin.core.VerificationException;
 import com.google.feathercoin.utils.NamedSemaphores;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

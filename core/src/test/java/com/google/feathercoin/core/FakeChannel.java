@@ -1,6 +1,13 @@
 package com.google.feathercoin.core;
 
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.AbstractChannel;
+import org.jboss.netty.channel.ChannelConfig;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelSink;
+import org.jboss.netty.channel.DefaultChannelConfig;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;

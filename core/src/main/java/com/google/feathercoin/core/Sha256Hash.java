@@ -17,6 +17,7 @@
 package com.google.feathercoin.core;
 
 import com.google.common.io.ByteStreams;
+
 import org.spongycastle.util.encoders.Hex;
 
 import java.io.File;

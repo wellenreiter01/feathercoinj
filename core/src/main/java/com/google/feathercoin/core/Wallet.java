@@ -16,37 +16,58 @@
 
 package com.google.feathercoin.core;
 
-import com.google.feathercoin.crypto.KeyCrypterScrypt;
-import org.feathercoinj.wallet.Protos.Wallet.EncryptionType;
-import org.spongycastle.crypto.params.KeyParameter;
-
-import com.google.feathercoin.core.TransactionConfidence.ConfidenceType;
-import com.google.feathercoin.core.WalletTransaction.Pool;
-import com.google.feathercoin.crypto.KeyCrypter;
-import com.google.feathercoin.crypto.KeyCrypterException;
-import com.google.feathercoin.store.WalletProtobufSerializer;
-import com.google.feathercoin.utils.Locks;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.feathercoin.core.TransactionConfidence.ConfidenceType;
+import com.google.feathercoin.core.WalletTransaction.Pool;
+import com.google.feathercoin.crypto.KeyCrypter;
+import com.google.feathercoin.crypto.KeyCrypterException;
+import com.google.feathercoin.crypto.KeyCrypterScrypt;
+import com.google.feathercoin.store.WalletProtobufSerializer;
+import com.google.feathercoin.utils.Locks;
 
+import org.feathercoinj.wallet.Protos.Wallet.EncryptionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongycastle.crypto.params.KeyParameter;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.feathercoin.core.Utils.feathercoinValueToFriendlyString;
-import static com.google.common.base.Preconditions.*;
 
 // To do list:
 //

@@ -17,6 +17,7 @@
 package com.google.feathercoin.core;
 
 import com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +32,8 @@ import java.util.Date;
 import java.util.List;
 
 import static com.google.feathercoin.core.Utils.doubleDigest;
-import static com.google.feathercoin.core.Utils.scryptDigest;
 import static com.google.feathercoin.core.Utils.doubleDigestTwoBuffers;
+import static com.google.feathercoin.core.Utils.scryptDigest;
 
 /**
  * <p>A block is a group of transactions, and is one of the fundamental data structures of the Feathercoin system.
@@ -45,14 +46,8 @@ import static com.google.feathercoin.core.Utils.doubleDigestTwoBuffers;
  * specifically using {@link Peer#getBlock(Sha256Hash)}, or grab one from a downloaded {@link BlockChain}.
  */
 public class Block extends Message {
-    private static final Logger log = LoggerFactory.getLogger(Block.class);
-    private static final long serialVersionUID = 2738848929966035281L;
-
     /** How many bytes are required to represent a block header WITHOUT the trailing 00 length byte. */
     public static final int HEADER_SIZE = 80;
-
-    static final long ALLOWED_TIME_DRIFT = 2 * 60 * 60; // Same value as official client.
-
     /**
      * A constant shared by the entire network: how large in bytes a block is allowed to be. One day we may have to
      * upgrade everyone to change this, so Feathercoin can continue to grow. For now it exists as an anti-DoS measure to
@@ -65,13 +60,23 @@ public class Block extends Message {
      * expensive/slow to verify.
      */
     public static final int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
-
+    static final long ALLOWED_TIME_DRIFT = 2 * 60 * 60; // Same value as official client.
     /** A value for difficultyTarget (nBits) that allows half of all possible hash solutions. Used in unit testing. */
     static final long EASIEST_DIFFICULTY_TARGET = 0x207fFFFFL;
-
+    static final byte[] EMPTY_BYTES = new byte[32];
+    private static final Logger log = LoggerFactory.getLogger(Block.class);
+    private static final long serialVersionUID = 2738848929966035281L;
     // For unit testing. If not zero, use this instead of the current time.
     static long fakeClock = 0;
-
+    /**
+     * The number that is one greater than the largest representable SHA-256
+     * hash.
+     */
+    static private BigInteger LARGEST_HASH = BigInteger.ONE.shiftLeft(256);
+    // Used to make transactions unique.
+    static private int txCounter;
+    /** If null, it means this object holds only the headers. */
+    List<Transaction> transactions;
     // Fields defined as part of the protocol format.
     private long version;
     private Sha256Hash prevBlockHash;
@@ -79,20 +84,13 @@ public class Block extends Message {
     private long time;
     private long difficultyTarget; // "nBits"
     private long nonce;
-
-    /** If null, it means this object holds only the headers. */
-    List<Transaction> transactions;
-
     /** Stores the hash of the block. If null, getHash() will recalculate it. */
     private transient Sha256Hash hash;
     private transient Sha256Hash scryptHash;
-
     private transient boolean headerParsed;
     private transient boolean transactionsParsed;
-
     private transient boolean headerBytesValid;
     private transient boolean transactionBytesValid;
-    
     // Blocks can be encoded in a way that will use more bytes than is optimal (due to VarInts having multiple encodings)
     // MAX_BLOCK_SIZE must be compared to the optimal encoding, not the actual encoding, so when parsing, we keep track
     // of the size of the ideal encoding in addition to the actual message size (which Message needs)
@@ -119,8 +117,8 @@ public class Block extends Message {
      * Contruct a block object from the Feathercoin wire format.
      * @param params NetworkParameters object.
      * @param parseLazy Whether to perform a full parse immediately or delay until a read is requested.
-     * @param parseRetain Whether to retain the backing byte array for quick reserialization.  
-     * If true and the backing byte array is invalidated due to modification of a field then 
+     * @param parseRetain Whether to retain the backing byte array for quick reserialization.
+     * If true and the backing byte array is invalidated due to modification of a field then
      * the cached bytes may be repopulated and retained if the message is serialized again in the future.
      * @param length The length of message if known.  Usually this is provided when deserializing of the wire
      * as the length will be provided as part of the header.  If unknown then set to Message.UNKNOWN_LENGTH
@@ -150,7 +148,7 @@ public class Block extends Message {
         // this case null. However it clears out a FindBugs warning and makes it explicit what we're doing.
         hash = null;
     }
-
+    
     private void parseHeader() {
         if (headerParsed)
             return;
@@ -204,7 +202,7 @@ public class Block extends Message {
         parseTransactions();
         length = cursor - offset;
     }
-    
+
     public int getOptimalEncodingMessageSize() {
         if (optimalEncodingMessageSize != 0)
             return optimalEncodingMessageSize;
@@ -440,7 +438,7 @@ public class Block extends Message {
         // transaction so we only need to invalidate that part of the cache.
         unCacheTransactions();
     }
-
+    
     private void unCacheHeader() {
         maybeParseHeader();
         headerBytesValid = false;
@@ -462,7 +460,7 @@ public class Block extends Message {
         // Clear merkleRoot last as it may end up being parsed during unCacheHeader().
         merkleRoot = null;
     }
-
+    
     /**
      * Calculates the block hash by serializing the block and hashing the
      * resulting bytes.
@@ -476,17 +474,29 @@ public class Block extends Message {
             throw new RuntimeException(e); // Cannot happen.
         }
     }
-    
+
     private Sha256Hash calculateScryptHash() {
+        boolean fNeoscrypt=true;
+         /*
+            1414346265 is timestamp of block 431999, last block with scrypt algo,
+            so we switch to neoscrypt  one second later
+             */
+        Date fork3_date = new Date(1414346264000L);
+      //  log.error(getTime().toString());
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
             writeHeader(bos);
-            return new Sha256Hash(Utils.reverseBytes(scryptDigest(bos.toByteArray())));
+            if (getTime().before(fork3_date))  {
+                fNeoscrypt = false;
+                return new Sha256Hash(Utils.reverseBytes(scryptDigest(bos.toByteArray(), fNeoscrypt)));
+            } else {
+                return new Sha256Hash(Utils.reverseBytes(scryptDigest(bos.toByteArray(), fNeoscrypt)));
+            }
         } catch (IOException e) {
             throw new RuntimeException(e); // Cannot happen.
         }
     }
-
+    
     /**
      * Returns the hash of the block (which for a valid, solved block should be below the target) in the form seen on
      * the block explorer. If you call this on block 1 in the production chain
@@ -509,20 +519,12 @@ public class Block extends Message {
             hash = calculateHash();
         return hash;
     }
-    
+
     public Sha256Hash getScryptHash() {
         if (scryptHash == null)
             scryptHash = calculateScryptHash();
         return scryptHash;
     }
-    
-    
-
-    /**
-     * The number that is one greater than the largest representable SHA-256
-     * hash.
-     */
-    static private BigInteger LARGEST_HASH = BigInteger.ONE.shiftLeft(256);
 
     /**
      * Returns the work represented by this block.<p>
@@ -838,6 +840,7 @@ public class Block extends Message {
     /** Returns the version of the block data structure as defined by the Feathercoin protocol. */
     public long getVersion() {
         maybeParseHeader();
+        log.warn("Version:", version);
         return version;
     }
 
@@ -909,6 +912,9 @@ public class Block extends Message {
         return nonce;
     }
 
+    // ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Unit testing related methods.
+
     void setNonce(long nonce) {
         unCacheHeader();
         this.nonce = nonce;
@@ -920,12 +926,6 @@ public class Block extends Message {
        maybeParseTransactions();
        return Collections.unmodifiableList(transactions);
     }
-
-    // ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Unit testing related methods.
-
-    // Used to make transactions unique.
-    static private int txCounter;
 
     /** Adds a coinbase transaction to the block. This exists for unit tests. */
     void addCoinbaseTransaction(byte[] pubKeyTo, BigInteger value) {
@@ -944,8 +944,6 @@ public class Block extends Message {
         coinbase.length = coinbase.feathercoinSerialize().length;
         adjustLength(transactions.size(), coinbase.length);
     }
-
-    static final byte[] EMPTY_BYTES = new byte[32];
 
     /**
      * Returns a solved block that builds on top of this one. This exists for unit tests.

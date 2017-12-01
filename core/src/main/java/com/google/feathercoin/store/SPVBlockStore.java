@@ -16,9 +16,14 @@
 
 package com.google.feathercoin.store;
 
-import com.google.feathercoin.core.*;
-import com.google.feathercoin.utils.Locks;
 import com.google.common.base.Preconditions;
+import com.google.feathercoin.core.Block;
+import com.google.feathercoin.core.NetworkParameters;
+import com.google.feathercoin.core.ProtocolException;
+import com.google.feathercoin.core.Sha256Hash;
+import com.google.feathercoin.core.StoredBlock;
+import com.google.feathercoin.utils.Locks;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +41,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * An SPVBlockStore holds a limited number of block headers in a memory mapped ring buffer. With such a store, you

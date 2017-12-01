@@ -16,6 +16,7 @@
 package com.google.feathercoin.discovery;
 
 import com.google.feathercoin.core.NetworkParameters;
+
 import org.junit.Test;
 
 import java.net.InetSocketAddress;

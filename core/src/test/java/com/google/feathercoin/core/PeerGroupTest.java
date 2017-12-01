@@ -19,6 +19,7 @@ package com.google.feathercoin.core;
 import com.google.feathercoin.discovery.PeerDiscovery;
 import com.google.feathercoin.discovery.PeerDiscoveryException;
 import com.google.feathercoin.store.MemoryBlockStore;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,7 +32,11 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class PeerGroupTest extends TestWithPeerGroup {
     static final NetworkParameters params = NetworkParameters.unitTests();

@@ -15,10 +15,9 @@
  */
 package com.google.feathercoin.crypto;
 
-import java.io.UnsupportedEncodingException;
-import java.security.SecureRandom;
-import java.util.Random;
-import java.util.UUID;
+import com.google.feathercoin.core.Utils;
+import com.google.feathercoin.utils.BriefLogFormatter;
+import com.google.protobuf.ByteString;
 
 import junit.framework.TestCase;
 
@@ -29,9 +28,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.feathercoin.core.Utils;
-import com.google.feathercoin.utils.BriefLogFormatter;
-import com.google.protobuf.ByteString;
+import java.io.UnsupportedEncodingException;
+import java.security.SecureRandom;
+import java.util.Random;
+import java.util.UUID;
 
 public class KeyCrypterScryptTest extends TestCase {
 

@@ -16,15 +16,14 @@
 
 package com.google.litecoin.examples;
 
-import com.google.litecoin.core.*;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.litecoin.crypto.KeyCrypterException;
 import com.google.litecoin.discovery.DnsDiscovery;
 import com.google.litecoin.discovery.IrcDiscovery;
 import com.google.litecoin.store.BlockStore;
 import com.google.litecoin.store.SPVBlockStore;
 import com.google.litecoin.utils.BriefLogFormatter;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 
 import java.io.File;
 import java.io.FileInputStream;

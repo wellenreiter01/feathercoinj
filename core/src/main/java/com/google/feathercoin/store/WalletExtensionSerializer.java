@@ -16,14 +16,14 @@
 
 package com.google.feathercoin.store;
 
-import java.util.Collection;
-import java.util.Collections;
-
-import org.feathercoinj.wallet.Protos;
-
 import com.google.feathercoin.core.NetworkParameters;
 import com.google.feathercoin.core.Wallet;
 import com.google.feathercoin.crypto.KeyCrypter;
+
+import org.feathercoinj.wallet.Protos;
+
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Optional helper for WalletProtobufSerializer that allows for serialization and deserialization of Wallet objects

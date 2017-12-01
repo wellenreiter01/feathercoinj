@@ -16,16 +16,11 @@
 
 package com.google.feathercoin.core;
 
-import static com.google.feathercoin.core.Utils.reverseBytes;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.math.BigInteger;
-import java.security.SecureRandom;
-import java.security.SignatureException;
-import java.util.Arrays;
+import com.google.feathercoin.crypto.EncryptedPrivateKey;
+import com.google.feathercoin.crypto.KeyCrypter;
+import com.google.feathercoin.crypto.KeyCrypterScrypt;
+import com.google.feathercoin.utils.BriefLogFormatter;
+import com.google.protobuf.ByteString;
 
 import org.feathercoinj.wallet.Protos;
 import org.feathercoinj.wallet.Protos.ScryptParameters;
@@ -36,11 +31,16 @@ import org.slf4j.LoggerFactory;
 import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.util.encoders.Hex;
 
-import com.google.feathercoin.crypto.EncryptedPrivateKey;
-import com.google.feathercoin.crypto.KeyCrypter;
-import com.google.feathercoin.crypto.KeyCrypterScrypt;
-import com.google.feathercoin.utils.BriefLogFormatter;
-import com.google.protobuf.ByteString;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.security.SignatureException;
+import java.util.Arrays;
+
+import static com.google.feathercoin.core.Utils.reverseBytes;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ECKeyTest {
     public Logger log = LoggerFactory.getLogger(ECKeyTest.class.getName());

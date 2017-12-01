@@ -16,23 +16,7 @@
 
 package com.google.feathercoin.store;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.math.BigInteger;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.*;
-
-import org.feathercoinj.wallet.Protos;
-import org.feathercoinj.wallet.Protos.Wallet.EncryptionType;
-
-import com.google.feathercoin.crypto.EncryptedPrivateKey;
-import com.google.feathercoin.crypto.KeyCrypter;
-import com.google.feathercoin.crypto.KeyCrypterScrypt;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.google.common.base.Preconditions;
 import com.google.feathercoin.core.ECKey;
 import com.google.feathercoin.core.NetworkParameters;
 import com.google.feathercoin.core.PeerAddress;
@@ -45,9 +29,28 @@ import com.google.feathercoin.core.TransactionOutPoint;
 import com.google.feathercoin.core.TransactionOutput;
 import com.google.feathercoin.core.Wallet;
 import com.google.feathercoin.core.WalletTransaction;
-import com.google.common.base.Preconditions;
+import com.google.feathercoin.crypto.EncryptedPrivateKey;
+import com.google.feathercoin.crypto.KeyCrypter;
+import com.google.feathercoin.crypto.KeyCrypterScrypt;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
+
+import org.feathercoinj.wallet.Protos;
+import org.feathercoinj.wallet.Protos.Wallet.EncryptionType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.ListIterator;
+import java.util.Map;
 
 /**
  * Serialize and de-serialize a wallet to a byte stream containing a

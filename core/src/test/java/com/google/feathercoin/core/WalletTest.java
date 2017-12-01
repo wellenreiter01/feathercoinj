@@ -16,6 +16,7 @@
 
 package com.google.feathercoin.core;
 
+import com.google.common.collect.Lists;
 import com.google.feathercoin.core.Transaction.SigHash;
 import com.google.feathercoin.core.WalletTransaction.Pool;
 import com.google.feathercoin.crypto.KeyCrypter;
@@ -24,7 +25,6 @@ import com.google.feathercoin.crypto.KeyCrypterScrypt;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.MemoryBlockStore;
 import com.google.feathercoin.utils.BriefLogFormatter;
-import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
 import org.feathercoinj.wallet.Protos;
@@ -39,8 +39,8 @@ import org.spongycastle.crypto.params.KeyParameter;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.security.SecureRandom;
 import java.net.InetAddress;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -49,12 +49,18 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.feathercoin.core.TestUtils.*;
+import static com.google.feathercoin.core.TestUtils.BlockPair;
 import static com.google.feathercoin.core.TestUtils.createFakeBlock;
 import static com.google.feathercoin.core.TestUtils.createFakeTx;
+import static com.google.feathercoin.core.TestUtils.makeSolvedTestBlock;
 import static com.google.feathercoin.core.Utils.feathercoinValueToFriendlyString;
 import static com.google.feathercoin.core.Utils.toNanoCoins;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class WalletTest {
     public Logger log = LoggerFactory.getLogger(WalletTest.class.getName());

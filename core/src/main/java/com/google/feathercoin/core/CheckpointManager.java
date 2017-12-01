@@ -19,10 +19,14 @@ package com.google.feathercoin.core;
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.BlockStoreException;
 import com.google.feathercoin.store.FullPrunedBlockStore;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -31,7 +35,9 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * <p>Vends hard-coded {@link StoredBlock}s for blocks throughout the chain. Checkpoints serve several purposes:</p>

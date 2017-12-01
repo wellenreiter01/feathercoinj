@@ -18,6 +18,7 @@ package com.google.feathercoin.core;
 
 import com.google.feathercoin.store.BlockStore;
 import com.google.feathercoin.store.MemoryBlockStore;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.spongycastle.util.encoders.Hex;
@@ -28,7 +29,9 @@ import java.util.Arrays;
 
 import static com.google.feathercoin.core.TestUtils.createFakeBlock;
 import static com.google.feathercoin.core.TestUtils.createFakeTx;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class LazyParseByteCacheTest {
 

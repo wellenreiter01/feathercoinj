@@ -17,6 +17,7 @@
 package com.google.feathercoin.core;
 
 import com.google.feathercoin.utils.Locks;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

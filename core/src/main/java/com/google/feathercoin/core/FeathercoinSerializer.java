@@ -27,7 +27,10 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.feathercoin.core.Utils.*;
+import static com.google.feathercoin.core.Utils.bytesToHexString;
+import static com.google.feathercoin.core.Utils.doubleDigest;
+import static com.google.feathercoin.core.Utils.readUint32;
+import static com.google.feathercoin.core.Utils.uint32ToByteArrayBE;
 
 /**
  * <p>Methods to serialize and de-serialize messages to the Feathercoin network format as defined in
