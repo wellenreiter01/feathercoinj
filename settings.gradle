@@ -1,0 +1,6 @@
+rootProject.name = 'feathercoinj-parent'
+include ':feathercoinj'
+include ':feathercoinj-tools'
+
+project(':feathercoinj').projectDir = "$rootDir/core" as File
+project(':feathercoinj-tools').projectDir = "$rootDir/tools" as File
