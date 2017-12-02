@@ -57,10 +57,10 @@ public class DnsDiscovery implements PeerDiscovery {
     private NetworkParameters netParams;
 
     public static final String[] defaultHosts = new String[]{
-            "dnsseed.feathercoin.com",
-            "dnsseed.fc.altcointech.net",
-            "dnsseed.alltheco.in",
-            "dnsseed.btcltcftc.net"
+            "feathercoin.com",
+            "dnsseed.feathercoin.com"
+           
+            
     };
 
     /**
@@ -124,6 +124,11 @@ public class DnsDiscovery implements PeerDiscovery {
         if (addrs.size() == 0) {
             throw new PeerDiscoveryException("Unable to find any peers via DNS");
         }
+        else { 
+            log.info("Got {} peers via DNS", addrs.size());
+        
+        }
+        
         ArrayList<InetSocketAddress> shuffledAddrs = new ArrayList<InetSocketAddress>(addrs);
         Collections.shuffle(shuffledAddrs);
         pool.shutdown();
