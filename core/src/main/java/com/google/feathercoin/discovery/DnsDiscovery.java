@@ -57,8 +57,9 @@ public class DnsDiscovery implements PeerDiscovery {
     private NetworkParameters netParams;
 
     public static final String[] defaultHosts = new String[]{
-            "feathercoin.com",
-            "dnsseed.feathercoin.com"
+        "fsight.chain.tips",
+        "dnsseed.feathercoin.com",
+        "dnsseed.neoscrypt.de"   
            
             
     };
