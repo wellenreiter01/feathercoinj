@@ -152,7 +152,10 @@ public class NetworkParameters implements Serializable {
             addressHeader = 14;
             if(type == 100) port = 11336;
             else port = 9336;
+	    // for v0.8 to v0.13
             packetMagic = 0xfbc0b6db; // FC, pchMessageStart
+	    / for v0.16
+            packetMagic = 0x41151a21; // FC, pchMessageStart
             genesisBlock.setDifficultyTarget(0x1e0ffff0L); // FC, nBits
             genesisBlock.setTime(1317972665L); // FC, nTime
             genesisBlock.setNonce(2084524493L); // FC, nNonce
